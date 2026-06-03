@@ -1,4 +1,4 @@
-const CACHE_NAME = 'defense-tycoon-v1';
+const CACHE_NAME = 'defense-tycoon-v2';
 const URLS_TO_CACHE = [
   '/DEFENSE-TYCOON/',
   '/DEFENSE-TYCOON/index.html',
