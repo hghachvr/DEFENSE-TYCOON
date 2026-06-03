@@ -331,6 +331,7 @@ const MISSIONS=[
   {id:"q9",d:{es:"Derrota un jefe",en:"Defeat a Boss"},r:60000,chk:s=>s.bossKills>=1},
   {id:"q10",d:{es:"Primer Renacimiento",en:"First Rebirth"},r:0,chk:s=>s.rebirths>=1}
 ];
+const rebirthNeedStr={es:"Necesitas {x} de petróleo total en esta ronda.",en:"Need {x} total oil this run"};
 const REBIRTH_MILESTONES=[
   {rb:1,d:{es:"Habilidad de Comandante + x1.15 ingresos",en:"Commander Ability unlocked + x1.15 income"}},
   {rb:2,d:{es:"x2 recompensas de oleada + recarga 20s más rápida",en:"x2 wave rewards + 20s faster cooldown"}},
@@ -657,7 +658,7 @@ function renderPanel(){
     const gain=ppGain();
     html+=`<div class="card" style="flex-direction:column;align-items:stretch;gap:4px"><div class="nm" style="color:#ffd24a">⚔️ ${t("rebirthTitle")}</div><div class="sub">${t("rebirthDesc")}</div></div>`;
     html+=`<div class="card"><div class="info"><div class="nm">${t("pp")}: <b style="color:#ffd24a">${S.pp}</b></div><div class="sub">${t("rebirths")}: ${S.rebirths}</div></div></div>`;
-    if(S.runEarned>=REBIRTH_REQ){html+=`<button class="big-btn green" data-act="rebirth">${t("rebirthBtn")} · +${gain} PP</button>`;}else{html+=`<button class="big-btn dis">${t("rebirthNeed").replace("{x}",fmt(REBIRTH_REQ))}</button>`;html+=`<div style="margin:4px 0 8px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:3px"><span>${fmt(S.runEarned)} / ${fmt(REBIRTH_REQ)}</span></div><div style="height:8px;background:#0a0f0a;border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(100,S.runEarned/REBIRTH_REQ*100)}%;background:linear-gradient(90deg,#ffd24a,#ff8c00);transition:width .3s"></div></div></div>`;}
+    if(S.runEarned>=REBIRTH_REQ){html+=`<button class="big-btn green" data-act="rebirth">${t("rebirthBtn")} · +${gain} PP</button>`;}else{html+=`<button class="big-btn dis">${(rebirthNeedStr[LANG]||rebirthNeedStr.en).replace("{x}",fmt(REBIRTH_REQ))}</button>`;html+=`<div style="margin:4px 0 8px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:3px"><span>${fmt(S.runEarned)} / ${fmt(REBIRTH_REQ)}</span></div><div style="height:8px;background:#0a0f0a;border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(100,S.runEarned/REBIRTH_REQ*100)}%;background:linear-gradient(90deg,#ffd24a,#ff8c00);transition:width .3s"></div></div></div>`;}
   }
   c.innerHTML=html;
   c.querySelectorAll("[data-spr]").forEach(cv=>{const s=SPRITES[cv.dataset.spr];if(!s)return;const g=cv.getContext("2d");g.imageSmoothingEnabled=false;g.clearRect(0,0,16,16);g.drawImage(s,0,0,16,16);});
