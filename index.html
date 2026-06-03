@@ -58,16 +58,14 @@
   /* Panel */
   #panel{flex:0 0 auto;background:var(--panel);border-top:2px solid var(--line);
     display:flex;flex-direction:column;max-height:46vh;z-index:5}
-  #tabs{display:flex;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--line);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #tabs{display:flex;overflow-x:auto;overflow-y:hidden;border-bottom:none;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   #tabs::-webkit-scrollbar{display:none}
-  .tab{flex:0 0 auto;min-width:52px;padding:10px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.3px;
+  .tab{flex:0 0 auto;min-width:50px;padding:9px 9px;font-size:9px;text-transform:uppercase;letter-spacing:.3px;
     background:none;border:none;color:var(--dim);cursor:pointer;white-space:nowrap;font-weight:bold;
     border-bottom:3px solid transparent;touch-action:manipulation}
   .tab.active{color:var(--amber);border-bottom-color:var(--amber);background:rgba(255,182,39,.06)}
   .tab .badge{display:inline-block;background:var(--red);color:#fff;border-radius:8px;
     font-size:8px;padding:0 4px;margin-left:3px;vertical-align:middle}
-  #buymode{display:flex;gap:4px;padding:5px 8px 0;align-items:center}
-  #buymode .lbl{font-size:9px;color:var(--dim);margin-right:auto}
   .bm{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
     border-radius:5px;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer}
   .bm.active{border-color:var(--amber);color:var(--amber)}
@@ -183,13 +181,15 @@
     <div id="tapHint"></div>
   </div>
   <div id="panel">
-    <div id="tabs"></div>
-    <div id="buymode">
-      <span class="lbl" data-t="buyAmt">Amount</span>
-      <button class="bm active" data-bm="1">x1</button>
-      <button class="bm" data-bm="10">x10</button>
-      <button class="bm" data-bm="max" data-t="max">Max</button>
+    <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line)">
+      <div id="tabs" style="flex:1 1 auto"></div>
+      <div style="display:flex;align-items:center;gap:3px;padding:0 6px;flex-shrink:0;border-left:1px solid var(--line)">
+        <button class="bm active" data-bm="1">x1</button>
+        <button class="bm" data-bm="10">x10</button>
+        <button class="bm" data-bm="max">Max</button>
+      </div>
     </div>
+
     <div id="content"></div>
   </div>
 </div>
