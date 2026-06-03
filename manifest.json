@@ -1,0 +1,50 @@
+{
+  "name": "Defense Tycoon",
+  "short_name": "Defense Tycoon",
+  "description": "Idle strategy game. Build your military base, extract oil, survive enemy waves, and rise to power through strategic rebirth.",
+  "start_url": "/DEFENSE-TYCOON/",
+  "scope": "/DEFENSE-TYCOON/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0a0e0a",
+  "background_color": "#070a08",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0e0a' width='192' height='192'/><rect fill='%235b6b73' x='48' y='56' width='96' height='80'/><rect fill='%23ffd24a' x='72' y='48' width='48' height='24'/><rect fill='%23c0392b' x='84' y='40' width='24' height='16'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%230a0e0a' width='512' height='512'/><rect fill='%235b6b73' x='128' y='150' width='256' height='212'/><rect fill='%23ffd24a' x='192' y='128' width='128' height='64'/><rect fill='%23c0392b' x='224' y='107' width='64' height='42'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230a0e0a' width='540' height='720'/><text x='270' y='360' font-size='48' fill='%235dff8f' text-anchor='middle' dominant-baseline='middle'>DEFENSE TYCOON</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["games", "strategy"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Playing",
+      "short_name": "Play",
+      "description": "Start a new game or continue your progress",
+      "url": "/DEFENSE-TYCOON/?start=true",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%235dff8f' width='96' height='96' rx='16'/><polygon points='36,24 36,72 72,48' fill='%230a0e0a'/></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
