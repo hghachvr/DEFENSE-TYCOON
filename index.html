@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0e0a">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Defense Tycoon</title>
 <style>
   :root{
@@ -386,7 +388,46 @@ function boostMult(){let m=1;const now=Date.now();for(const b of BOOSTS)if(b.unt
 /* AUDIO */
 const Audio=(function(){
   let ctx=null,master=null,musicGain=null,musicTimer=null;
-  function init(){if(ctx)return;try{ctx=new(window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0.5;master.connect(ctx.destination);musicGain=ctx.createGain();musicGain.gain.value=0.0;musicGain.connect(master);}catch(e){ctx=null;}}
+  
+/* AD MODAL FOR REBIRTH */
+let adModalShowing = false;
+function showRebirthAd(){
+  if(adModalShowing)return;
+  adModalShowing=true;
+  const modal=document.getElementById("adModal");
+  modal.style.display="flex";
+  Audio.buy();
+  let countdown=5;
+  document.getElementById("adTimer").textContent=countdown;
+  const timer=setInterval(()=>{
+    countdown--;
+    document.getElementById("adTimer").textContent=countdown;
+    if(countdown<=0){
+      clearInterval(timer);
+      modal.style.display="none";
+      adModalShowing=false;
+      // Give bonus: 10% extra oil
+      const bonus=S.runEarned*0.10;
+      addOil(bonus,cx,cy);
+      toast("🎬 +10% bonus oil!");
+      completeRebirth();
+    }
+  },1000);
+}
+function completeRebirth(){
+  const gain=ppGain();if(gain<=0)return;
+  S.pp+=gain;S.rebirths++;
+  const keep={lang:S.lang,sound:S.sound,music:S.music,rebirths:S.rebirths,pp:S.pp,perks:S.perks,
+    bossKills:S.bossKills,megaBossKills:S.megaBossKills,missionsDone:S.missionsDone,
+    lastDaily:S.lastDaily,totalLifetime:S.totalLifetime,tutorialDone:S.tutorialDone,lastAdWatch:S.lastAdWatch};
+  S=Object.assign(freshRun(),keep,{lastSaved:Date.now()});
+  enemies=[];projectiles=[];particles=[];BOOSTS=[];
+  closeModal();Audio.win();checkMissions();switchTab("extract");refreshHUD();
+  toast("+"+gain+" PP 🎖️");
+}
+
+/* INIT */
+function init(){if(ctx)return;try{ctx=new(window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0.5;master.connect(ctx.destination);musicGain=ctx.createGain();musicGain.gain.value=0.0;musicGain.connect(master);}catch(e){ctx=null;}}
   function ensure(){if(!ctx)init();if(ctx&&ctx.state==="suspended")ctx.resume();}
   function blip(freq,dur,type,vol,to){if(!ctx||!S.sound)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type||"square";o.frequency.value=freq;g.gain.value=0;g.gain.linearRampToValueAtTime(vol||0.2,ctx.currentTime+0.005);g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+dur);o.connect(g);g.connect(to||master);o.start();o.stop(ctx.currentTime+dur);}
   function noise(dur,vol,fc){if(!ctx||!S.sound)return;const n=ctx.createBufferSource(),buf=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);n.buffer=buf;const f=ctx.createBiquadFilter();f.type="lowpass";f.frequency.value=fc||1200;const g=ctx.createGain();g.gain.value=vol||0.3;n.connect(f);f.connect(g);g.connect(master);n.start();}
@@ -696,6 +737,45 @@ function loop(now){
 }
 
 /* INIT */
+
+/* AD MODAL FOR REBIRTH */
+let adModalShowing = false;
+function showRebirthAd(){
+  if(adModalShowing)return;
+  adModalShowing=true;
+  const modal=document.getElementById("adModal");
+  modal.style.display="flex";
+  Audio.buy();
+  let countdown=5;
+  document.getElementById("adTimer").textContent=countdown;
+  const timer=setInterval(()=>{
+    countdown--;
+    document.getElementById("adTimer").textContent=countdown;
+    if(countdown<=0){
+      clearInterval(timer);
+      modal.style.display="none";
+      adModalShowing=false;
+      // Give bonus: 10% extra oil
+      const bonus=S.runEarned*0.10;
+      addOil(bonus,cx,cy);
+      toast("🎬 +10% bonus oil!");
+      completeRebirth();
+    }
+  },1000);
+}
+function completeRebirth(){
+  const gain=ppGain();if(gain<=0)return;
+  S.pp+=gain;S.rebirths++;
+  const keep={lang:S.lang,sound:S.sound,music:S.music,rebirths:S.rebirths,pp:S.pp,perks:S.perks,
+    bossKills:S.bossKills,megaBossKills:S.megaBossKills,missionsDone:S.missionsDone,
+    lastDaily:S.lastDaily,totalLifetime:S.totalLifetime,tutorialDone:S.tutorialDone,lastAdWatch:S.lastAdWatch};
+  S=Object.assign(freshRun(),keep,{lastSaved:Date.now()});
+  enemies=[];projectiles=[];particles=[];BOOSTS=[];
+  closeModal();Audio.win();checkMissions();switchTab("extract");refreshHUD();
+  toast("+"+gain+" PP 🎖️");
+}
+
+/* INIT */
 function init(){
   buildSprites();resize();
   const loaded=load();
@@ -710,7 +790,27 @@ function init(){
   requestAnimationFrame(loop);
 }
 window.addEventListener("load",()=>setTimeout(resize,60));
+
+/* PWA: Register Service Worker */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    console.log('Service Worker registered');
+  }).catch(err => {
+    console.log('Service Worker registration failed:', err);
+  });
+}
+
 init();
 </script>
+<!-- Ad Fullscreen Modal -->
+<div id="adModal" style="position:fixed;inset:0;background:rgba(0,0,0,.95);display:none;z-index:150;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;color:var(--txt)">
+    <div style="font-size:32px;margin-bottom:16px">📺</div>
+    <div style="font-size:18px;font-weight:bold;margin-bottom:8px">Watch Ad to Continue</div>
+    <div style="font-size:14px;color:var(--dim);margin-bottom:20px">+10% bonus oil after rebirth</div>
+    <div id="adTimer" style="font-size:48px;font-weight:bold;color:var(--gold);font-family:monospace">5</div>
+    <div style="font-size:12px;color:var(--dim);margin-top:12px">Ad closing in...</div>
+  </div>
+</div>
 </body>
 </html>
