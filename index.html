@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e0a">
+<title>Military Oil Tycoon Defense</title>
+<style>
+  :root{
+    --bg:#070a08; --panel:#0e1410; --panel2:#131b15; --line:#1f2c22;
+    --amber:#ffb627; --amber2:#ff8c00; --green:#5dff8f; --green2:#1fae4d;
+    --red:#ff4d4d; --blue:#39c0ff; --txt:#d8e6d8; --dim:#7e927e; --gold:#ffd24a;
+    --shadow:0 6px 0 rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0}
+  html,body{height:100%; overflow:hidden; background:var(--bg);
+    font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif; color:var(--txt);
+    touch-action:manipulation; user-select:none; -webkit-user-select:none}
+  .mono{font-family:'Courier New',monospace; letter-spacing:.5px}
+  #game{position:fixed; inset:0; display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+  /* ---- HUD ---- */
+  #hud{flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px;
+    background:linear-gradient(180deg,#0d130e,#0a0f0a); border-bottom:2px solid var(--line); z-index:5}
+  .stat{background:var(--panel2); border:1px solid var(--line); border-radius:8px;
+    padding:5px 10px; min-width:0; flex:1 1 auto; display:flex; flex-direction:column; line-height:1.1}
+  .stat .lbl{font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px}
+  .stat .val{font-size:16px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .stat.oil .val{color:var(--amber)} .stat.rate .val{color:var(--green)}
+  .stat.mult .val{color:var(--gold)} .stat.wave .val{color:var(--blue)}
+  .hp-wrap{flex:1 1 100%; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:4px 8px}
+  .hp-top{display:flex; justify-content:space-between; font-size:9px; color:var(--dim); text-transform:uppercase}
+  .hp-bar{height:8px; margin-top:3px; background:#000; border-radius:5px; overflow:hidden; border:1px solid #000}
+  .hp-fill{height:100%; width:100%; background:linear-gradient(90deg,#2bd05a,#5dff8f); transition:width .2s}
+  #hud .tools{display:flex; gap:6px; align-items:stretch; flex:0 0 auto}
+  .icon-btn{background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:8px; width:42px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center}
+  .icon-btn:active{transform:translateY(1px)}
+  .icon-btn.on{border-color:var(--green); color:var(--green)}
+  .icon-btn.off{opacity:.45}
+
+  /* ---- Scene ---- */
+  #stage{flex:1 1 auto; position:relative; overflow:hidden; min-height:120px}
+  #scene{position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated}
+  #tapHint{position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
+    font-size:11px; color:var(--dim); pointer-events:none; text-shadow:0 1px 2px #000; text-align:center}
+  #alert{position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(255,77,77,.15); border:1px solid var(--red); color:var(--red);
+    padding:6px 16px; border-radius:20px; font-weight:bold; font-size:13px; letter-spacing:1px;
+    pointer-events:none; opacity:0; transition:opacity .3s; text-transform:uppercase}
+  #alert.show{opacity:1; animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.5}}
+  #flash{position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none}
+
+  /* ---- Panel ---- */
+  #panel{flex:0 0 auto; background:var(--panel); border-top:2px solid var(--line);
+    display:flex; flex-direction:column; max-height:46vh; z-index:5}
+  #tabs{display:flex; overflow-x:auto; border-bottom:1px solid var(--line); scrollbar-width:none}
+  #tabs::-webkit-scrollbar{display:none}
+  .tab{flex:1 0 auto; padding:9px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+    background:none; border:none; color:var(--dim); cursor:pointer; white-space:nowrap; font-weight:bold;
+    border-bottom:2px solid transparent}
+  .tab.active{color:var(--amber); border-bottom-color:var(--amber); background:rgba(255,182,39,.06)}
+  .tab .badge{display:inline-block; background:var(--red); color:#fff; border-radius:8px;
+    font-size:9px; padding:0 5px; margin-left:4px; vertical-align:middle}
+  #buymode{display:flex; gap:4px; padding:6px 10px 0; align-items:center}
+  #buymode .lbl{font-size:10px; color:var(--dim); margin-right:auto}
+  .bm{background:var(--panel2); border:1px solid var(--line); color:var(--dim);
+    border-radius:6px; padding:3px 12px; font-size:11px; font-weight:bold; cursor:pointer}
+  .bm.active{border-color:var(--amber); color:var(--amber)}
+  #content{overflow-y:auto; padding:8px 10px 14px; -webkit-overflow-scrolling:touch}
+
+  /* item cards */
+  .card{display:flex; align-items:center; gap:10px; background:var(--panel2);
+    border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:7px}
+  .card .spr{width:44px; height:44px; flex:0 0 44px; border-radius:7px; background:#0a0f0a;
+    image-rendering:pixelated; border:1px solid var(--line)}
+  .card .info{flex:1 1 auto; min-width:0}
+  .card .nm{font-weight:bold; font-size:13px}
+  .card .sub{font-size:10px; color:var(--dim)}
+  .card .sub b{color:var(--green)}
+  .buy{flex:0 0 auto; min-width:84px; text-align:center; border:none; border-radius:8px;
+    padding:8px 10px; font-weight:bold; font-size:12px; cursor:pointer; color:#0a0f0a;
+    background:linear-gradient(180deg,var(--amber),var(--amber2)); box-shadow:0 3px 0 #8a5a00}
+  .buy:active{transform:translateY(2px); box-shadow:0 1px 0 #8a5a00}
+  .buy.cant{background:#26302a; color:#5b6b5b; box-shadow:0 3px 0 #11160f; cursor:default}
+  .buy .c{display:block; font-size:10px; opacity:.85}
+  .owned-pill{font-size:10px; color:var(--gold); background:#000; border-radius:6px; padding:1px 6px}
+
+  .card.locked{opacity:.55}
+  .card.done .buy{background:#1d4427; color:var(--green); box-shadow:0 3px 0 #0c2113}
+
+  .section-note{font-size:11px; color:var(--dim); margin:2px 2px 10px; line-height:1.4}
+  .big-btn{display:block; width:100%; border:none; border-radius:12px; padding:14px;
+    font-size:15px; font-weight:bold; cursor:pointer; color:#0a0f0a; margin-top:8px;
+    background:linear-gradient(180deg,var(--gold),#e0a200); box-shadow:0 4px 0 #9c6b00; text-transform:uppercase; letter-spacing:1px}
+  .big-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #9c6b00}
+  .big-btn.dis{background:#26302a; color:#5b6b5b; box-shadow:0 4px 0 #11160f}
+
+  /* ---- Modal ---- */
+  #modal{position:fixed; inset:0; background:rgba(0,0,0,.78); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:18px}
+  #modal.show{display:flex}
+  .box{background:var(--panel); border:2px solid var(--line); border-radius:16px;
+    padding:18px; max-width:380px; width:100%; max-height:86vh; overflow-y:auto; box-shadow:0 0 40px rgba(0,0,0,.6)}
+  .box h2{font-size:18px; color:var(--amber); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px}
+  .box p{font-size:13px; color:var(--txt); line-height:1.5; margin:8px 0}
+  .box .num{color:var(--gold); font-weight:bold; font-size:22px}
+  .row{display:flex; gap:8px; margin-top:12px}
+  .row .big-btn{margin-top:0}
+  .ghost{background:#1a221b!important; color:var(--dim)!important; box-shadow:0 4px 0 #0a0f0a!important}
+  .toast{position:fixed; left:50%; bottom:calc(46vh + 16px); transform:translateX(-50%);
+    background:#10301a; border:1px solid var(--green2); color:var(--green); padding:8px 16px;
+    border-radius:20px; font-size:12px; font-weight:bold; z-index:60; opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap}
+  .toast.show{opacity:1}
+  .boost-tag{display:inline-flex; align-items:center; gap:4px; background:#3a2a00;
+    border:1px solid var(--amber); color:var(--amber); border-radius:8px; padding:2px 8px; font-size:11px; font-weight:bold; margin:2px}
+  #boosts{position:absolute; top:8px; right:8px; display:flex; flex-direction:column; gap:4px; align-items:flex-end}
+  @media(min-width:760px){
+    #panel{max-height:42vh}
+    .stat .val{font-size:18px}
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud">
+    <div class="stat oil"><span class="lbl" data-t="oil">Petróleo</span><span class="val mono" id="hOil">0</span></div>
+    <div class="stat rate"><span class="lbl" data-t="persec">Por seg</span><span class="val mono" id="hRate">0</span></div>
+    <div class="stat mult"><span class="lbl" data-t="mult">Multiplic.</span><span class="val mono" id="hMult">x1</span></div>
+    <div class="stat wave"><span class="lbl" data-t="wave">Oleada</span><span class="val mono" id="hWave">—</span></div>
+    <div class="tools">
+      <button class="icon-btn" id="bLang">ES</button>
+      <button class="icon-btn on" id="bSound">🔊</button>
+      <button class="icon-btn" id="bMenu">⚙</button>
+    </div>
+    <div class="hp-wrap">
+      <div class="hp-top"><span data-t="baseHp">Integridad de la Base</span><span id="hHpTxt">100%</span></div>
+      <div class="hp-bar"><div class="hp-fill" id="hHpFill"></div></div>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="scene"></canvas>
+    <div id="boosts"></div>
+    <div id="alert"></div>
+    <div id="flash"></div>
+    <div id="tapHint" data-t="tapHint">Toca el suelo para extraer petróleo</div>
+  </div>
+
+  <div id="panel">
+    <div id="tabs"></div>
+    <div id="buymode">
+      <span class="lbl" data-t="buyAmt">Cantidad</span>
+      <button class="bm active" data-bm="1">x1</button>
+      <button class="bm" data-bm="10">x10</button>
+      <button class="bm" data-bm="max" data-t="max">Máx</button>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<div id="modal"><div class="box" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =======================================================================
+   MILITARY OIL TYCOON DEFENSE  —  juego incremental / defensa (ES/EN)
+   Single-file. Autoguardado en localStorage (funciona al abrir el .html
+   en tu propio navegador).
+   ======================================================================= */
+
+/* ---------------- i18n ---------------- */
+const STR = {
+  oil:{es:"Petróleo",en:"Oil"}, persec:{es:"Por seg",en:"Per sec"},
+  mult:{es:"Multiplic.",en:"Multiplier"}, wave:{es:"Oleada",en:"Wave"},
+  baseHp:{es:"Integridad de la Base",en:"Base Integrity"},
+  tapHint:{es:"Toca el suelo para extraer petróleo",en:"Tap the ground to extract oil"},
+  buyAmt:{es:"Cantidad",en:"Amount"}, max:{es:"Máx",en:"Max"},
+  tabExtract:{es:"Extracción",en:"Extraction"}, tabDefense:{es:"Defensa",en:"Defense"},
+  tabUnits:{es:"Unidades",en:"Units"}, tabTech:{es:"Tecnología",en:"Tech"},
+  tabMissions:{es:"Misiones",en:"Missions"}, tabRebirth:{es:"Renacer",en:"Rebirth"},
+  buy:{es:"Comprar",en:"Buy"}, owned:{es:"Tienes",en:"Owned"},
+  prod:{es:"prod",en:"prod"}, each:{es:"c/u",en:"each"},
+  locked:{es:"Bloqueado",en:"Locked"}, requires:{es:"Requiere",en:"Requires"},
+  claim:{es:"Reclamar",en:"Claim"}, claimed:{es:"Listo",en:"Done"},
+  reward:{es:"Recompensa",en:"Reward"},
+  tapPower:{es:"Potencia de Extracción Manual",en:"Manual Extraction Power"},
+  upgradeTap:{es:"Mejorar Taladro Manual",en:"Upgrade Manual Drill"},
+  extractNote:{es:"Toca el campo para extraer petróleo a mano. Compra extractores para producir automáticamente.",
+               en:"Tap the field to mine oil by hand. Buy extractors to produce automatically."},
+  defenseNote:{es:"Las defensas disparan solas a los enemigos. Muros y búnkeres aumentan la integridad de tu base.",
+               en:"Defenses fire automatically at enemies. Walls and bunkers raise your base integrity."},
+  unitsNote:{es:"Las unidades militares defienden la base de forma automática durante las oleadas.",
+             en:"Military units defend the base automatically during waves."},
+  techNote:{es:"Mejoras permanentes de un solo uso. Se reinician al Renacer.",
+            en:"Permanent one-time upgrades. They reset on Rebirth."},
+  dmg:{es:"daño",en:"dmg"}, hp:{es:"vida",en:"hp"},
+  settings:{es:"Ajustes",en:"Settings"}, sound:{es:"Sonido",en:"Sound"}, music:{es:"Música",en:"Music"},
+  save:{es:"Guardar ahora",en:"Save now"}, saved:{es:"¡Partida guardada!",en:"Game saved!"},
+  reset:{es:"Borrar todo",en:"Wipe save"}, close:{es:"Cerrar",en:"Close"},
+  resetQ:{es:"¿Borrar TODO el progreso? Esto no se puede deshacer.",en:"Erase ALL progress? This cannot be undone."},
+  yes:{es:"Sí, borrar",en:"Yes, wipe"}, cancel:{es:"Cancelar",en:"Cancel"},
+  credits:{es:"Producción · Defensa · Renacer. Hecho para jugar en el navegador.",
+           en:"Production · Defense · Rebirth. Built to play in the browser."},
+  rebirthTitle:{es:"Renacimiento Militar",en:"Military Rebirth"},
+  rebirthDesc:{es:"Reinicia tu imperio petrolero a cambio de Puntos de Prestigio (PP) que otorgan bonos PERMANENTES.",
+               en:"Reset your oil empire in exchange for Prestige Points (PP) that grant PERMANENT bonuses."},
+  rebirthGain:{es:"Ganarás",en:"You will gain"},
+  rebirthNeed:{es:"Necesitas {x} de petróleo total esta ronda para renacer.",
+               en:"You need {x} total oil this run to rebirth."},
+  rebirthBtn:{es:"RENACER",en:"REBIRTH"},
+  rebirthConfirm:{es:"Renacerás y perderás petróleo, extractores, defensas y unidades. Conservas PP y mejoras de prestigio. ¿Continuar?",
+                  en:"You will rebirth and lose oil, extractors, defenses and units. You keep PP and prestige upgrades. Continue?"},
+  pp:{es:"Puntos de Prestigio",en:"Prestige Points"},
+  rebirths:{es:"Renacimientos",en:"Rebirths"},
+  prestigeShop:{es:"Arsenal de Prestigio",en:"Prestige Arsenal"},
+  lvl:{es:"Nivel",en:"Level"},
+  daily:{es:"Recompensa Diaria",en:"Daily Reward"},
+  dailyReady:{es:"¡Cofre diario listo!",en:"Daily chest ready!"},
+  dailyWait:{es:"Vuelve en {x}",en:"Come back in {x}"},
+  openChest:{es:"Abrir Cofre",en:"Open Chest"},
+  chestWon:{es:"¡Cofre abierto!",en:"Chest opened!"},
+  offlineTitle:{es:"Bienvenido de vuelta, Comandante",en:"Welcome back, Commander"},
+  offlineBody:{es:"Tus pozos produjeron mientras estabas fuera durante {t}:",
+               en:"Your wells produced while you were away for {t}:"},
+  collect:{es:"Recoger",en:"Collect"},
+  waveIncoming:{es:"⚠ OLEADA ENTRANTE",en:"⚠ WAVE INCOMING"},
+  bossIncoming:{es:"☠ JEFE ENTRANTE",en:"☠ BOSS INCOMING"},
+  waveCleared:{es:"OLEADA SUPERADA",en:"WAVE CLEARED"},
+  raided:{es:"¡BASE SAQUEADA!",en:"BASE RAIDED!"},
+  nextWave:{es:"Próx. oleada: {x}s",en:"Next wave: {x}s"},
+  defending:{es:"DEFENDIENDO",en:"DEFENDING"},
+  totalDps:{es:"Poder de fuego",en:"Firepower"},
+  boostX2:{es:"Producción x{m}",en:"Production x{m}"},
+  perkOil:{es:"Doctrina Petrolera",en:"Oil Doctrine"},
+  perkOilD:{es:"+25% producción de petróleo por nivel",en:"+25% oil production per level"},
+  perkDps:{es:"Complejo Industrial-Militar",en:"Military Complex"},
+  perkDpsD:{es:"+30% poder de fuego por nivel",en:"+30% firepower per level"},
+  perkHp:{es:"Fortaleza del Desierto",en:"Desert Fortress"},
+  perkHpD:{es:"+30% integridad de la base por nivel",en:"+30% base integrity per level"},
+  perkTap:{es:"Perforación Profunda",en:"Deep Drilling"},
+  perkTapD:{es:"x3 extracción manual por nivel",en:"x3 manual extraction per level"},
+  perkOff:{es:"Reservas Estratégicas",en:"Strategic Reserves"},
+  perkOffD:{es:"+2h de ganancias offline por nivel",en:"+2h offline earnings per level"},
+  spendPP:{es:"Mejorar ({x} PP)",en:"Upgrade ({x} PP)"},
+  noMissions:{es:"¡Todas las misiones completadas! Vuelve tras renacer.",en:"All missions complete! Come back after a rebirth."},
+};
+let LANG = "es";
+function t(key){ const o = STR[key]; return o ? (o[LANG]||o.es) : key; }
+function nm(o){ return o[LANG]||o.es; }
+
+/* ---------------- number format ---------------- */
+const SUF=["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","UDc","DDc","TDc"];
+function fmt(n){
+  if(!isFinite(n)) return "∞";
+  n = Math.max(0,n);
+  if(n<1000){ return (n>=100? Math.floor(n) : Math.floor(n*10)/10).toString().replace(/\.0$/,""); }
+  let tier = Math.floor(Math.log10(n)/3);
+  if(tier < SUF.length){ let v=n/Math.pow(1000,tier); return (Math.floor(v*100)/100)+SUF[tier]; }
+  return n.toExponential(2).replace("e+","e");
+}
+function fmtTime(s){
+  s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  if(h>0) return h+"h "+m+"m"; if(m>0) return m+"m "+sec+"s"; return sec+"s";
+}
+
+/* ---------------- game data ---------------- */
+const GENERATORS = [
+  {id:"pump",    name:{es:"Bomba de Petróleo",en:"Oil Pump"},      cost:15,    mult:1.13, prod:0.3,   sprite:"pump"},
+  {id:"derrick", name:{es:"Torre de Perforación",en:"Oil Derrick"},cost:220,   mult:1.14, prod:3,     sprite:"derrick"},
+  {id:"refinery",name:{es:"Refinería",en:"Refinery"},              cost:3400,  mult:1.15, prod:22,    sprite:"refinery"},
+  {id:"drone",   name:{es:"Dron Extractor",en:"Extractor Drone"},  cost:52000, mult:1.16, prod:150,   sprite:"edrone"},
+  {id:"platform",name:{es:"Plataforma Marina",en:"Offshore Rig"},  cost:8.5e5, mult:1.17, prod:1100,  sprite:"platform"},
+  {id:"quantum", name:{es:"Pozo Cuántico",en:"Quantum Well"},      cost:1.4e7, mult:1.18, prod:8200,  sprite:"quantum"},
+  {id:"fusion",  name:{es:"Reactor de Síntesis",en:"Synthesis Reactor"}, cost:2.6e8, mult:1.19, prod:62000, sprite:"fusion"},
+];
+const DEFENSE = [
+  {id:"wall",   name:{es:"Muro Blindado",en:"Armored Wall"},  cost:60,   mult:1.20, hp:60,  dps:0,  sprite:"wall"},
+  {id:"turret", name:{es:"Torreta Gatling",en:"Gatling Turret"},cost:150, mult:1.22, hp:0,   dps:6,  sprite:"turret"},
+  {id:"bunker", name:{es:"Búnker",en:"Bunker"},               cost:950,  mult:1.23, hp:240, dps:10, sprite:"bunker"},
+  {id:"radar",  name:{es:"Radar Táctico",en:"Tactical Radar"},cost:3200, mult:1.25, hp:0,   dps:25, sprite:"radar"},
+  {id:"hangar", name:{es:"Hangar",en:"Hangar"},               cost:9000, mult:1.24, hp:80,  dps:70, sprite:"hangar"},
+  {id:"genpow", name:{es:"Generador Eléctrico",en:"Power Generator"}, cost:2000, mult:1.21, hp:40, dps:0, sprite:"genpow", oilBonus:0.03},
+];
+const UNITS = [
+  {id:"soldier",  name:{es:"Soldado",en:"Soldier"},          cost:90,    mult:1.18, dps:4,    sprite:"soldier"},
+  {id:"sniper",   name:{es:"Francotirador",en:"Sniper"},     cost:450,   mult:1.20, dps:20,   sprite:"sniper"},
+  {id:"tank",     name:{es:"Tanque",en:"Tank"},              cost:2600,  mult:1.21, dps:85,   sprite:"tank"},
+  {id:"heli",     name:{es:"Helicóptero",en:"Helicopter"},   cost:11000, mult:1.22, dps:230,  sprite:"heli"},
+  {id:"jet",      name:{es:"Jet de Combate",en:"Fighter Jet"},cost:48000, mult:1.23, dps:700,  sprite:"jet"},
+  {id:"arty",     name:{es:"Artillería",en:"Artillery"},     cost:160000,mult:1.24, dps:2000, sprite:"arty"},
+  {id:"missile",  name:{es:"Batería de Misiles",en:"Missile Battery"},cost:7.5e5, mult:1.25, dps:6500, sprite:"missile"},
+];
+const TECHS = [
+  {id:"t_drill", name:{es:"Brocas de Diamante",en:"Diamond Drills"},   cost:400,   eff:"oil", val:2, req:300},
+  {id:"t_hyd",   name:{es:"Extracción Hidráulica",en:"Hydraulic Mining"},cost:1500, eff:"tap", val:4, req:1200},
+  {id:"t_armor", name:{es:"Blindaje Reactivo",en:"Reactive Armor"},    cost:5000,  eff:"hp",  val:2, req:4000},
+  {id:"t_ap",    name:{es:"Munición Perforante",en:"AP Ammunition"},   cost:9000,  eff:"dps", val:2, req:7000},
+  {id:"t_auto",  name:{es:"Bombas Automatizadas",en:"Automated Pumps"},cost:35000, eff:"oil", val:3, req:25000},
+  {id:"t_laser", name:{es:"Torretas Láser",en:"Laser Turrets"},        cost:90000, eff:"dps", val:3, req:70000},
+  {id:"t_nano",  name:{es:"Nano-Refinado",en:"Nano Refining"},         cost:5e5,   eff:"oil", val:4, req:4e5},
+  {id:"t_shield",name:{es:"Escudo Energético",en:"Energy Shield"},     cost:1.2e6, eff:"hp",  val:3, req:1e6},
+  {id:"t_rail",  name:{es:"Railguns",en:"Railguns"},                   cost:6e6,   eff:"dps", val:4, req:5e6},
+  {id:"t_ai",    name:{es:"IA de Producción",en:"Production AI"},       cost:5e7,   eff:"oil", val:5, req:4e7},
+];
+const PERKS = [
+  {id:"p_oil", name:"perkOil", desc:"perkOilD", base:1,  effId:"oil"},
+  {id:"p_dps", name:"perkDps", desc:"perkDpsD", base:1,  effId:"dps"},
+  {id:"p_hp",  name:"perkHp",  desc:"perkHpD",  base:1,  effId:"hp"},
+  {id:"p_tap", name:"perkTap", desc:"perkTapD", base:2,  effId:"tap"},
+  {id:"p_off", name:"perkOff", desc:"perkOffD", base:2,  effId:"off"},
+];
+const MISSIONS = [
+  {id:"q1", d:{es:"Extrae 200 de petróleo",en:"Extract 200 oil"}, r:80,  chk:s=>s.runEarned>=200},
+  {id:"q2", d:{es:"Compra 10 Bombas de Petróleo",en:"Buy 10 Oil Pumps"}, r:200, chk:s=>(s.gen.pump||0)>=10},
+  {id:"q3", d:{es:"Compra tu primera Torreta",en:"Buy your first Turret"}, r:250, chk:s=>(s.def.turret||0)>=1},
+  {id:"q4", d:{es:"Supera la oleada 3",en:"Clear wave 3"}, r:600, chk:s=>s.waveCleared>=3},
+  {id:"q5", d:{es:"Recluta 5 Soldados",en:"Recruit 5 Soldiers"}, r:900, chk:s=>(s.unit.soldier||0)>=5},
+  {id:"q6", d:{es:"Compra una Refinería",en:"Buy a Refinery"}, r:4000, chk:s=>(s.gen.refinery||0)>=1},
+  {id:"q7", d:{es:"Supera la oleada 8",en:"Clear wave 8"}, r:9000, chk:s=>s.waveCleared>=8},
+  {id:"q8", d:{es:"Investiga 3 Tecnologías",en:"Research 3 Techs"}, r:25000, chk:s=>Object.keys(s.tech).length>=3},
+  {id:"q9", d:{es:"Derrota un Jefe",en:"Defeat a Boss"}, r:60000, chk:s=>s.bossKills>=1},
+  {id:"q10",d:{es:"Realiza tu primer Renacimiento",en:"Perform your first Rebirth"}, r:0, chk:s=>s.rebirths>=1},
+];
+const REBIRTH_REQ = 1e6;     // oil this run to allow rebirth
+const PERK_COST = lvl => Math.ceil(2 * Math.pow(1.6, lvl)); // PP cost for next level
+
+/* ---------------- state ---------------- */
+function freshRun(){
+  return { oil:0, runEarned:0, tapLvl:0,
+    gen:{}, def:{}, unit:{}, tech:{},
+    wave:0, waveCleared:0, inWave:false, waveTimer:25, baseHP:100 };
+}
+function freshState(){
+  return Object.assign(freshRun(), {
+    lang:"es", sound:true, music:false,
+    rebirths:0, pp:0, perks:{}, bossKills:0,
+    missionsDone:{}, lastDaily:0, lastSaved:Date.now(),
+    totalLifetime:0,
+  });
+}
+let S = freshState();
+
+/* ---------------- derived calcs ---------------- */
+function techMult(eff){ let m=1; for(const k in S.tech){ const tc=TECHS.find(x=>x.id===k); if(tc&&tc.eff===eff) m*=tc.val; } return m; }
+function perkLvl(id){ return S.perks[id]||0; }
+function rebirthFlat(){ return 1 + 0.10*S.rebirths + 0.02*S.pp; }
+function oilMultiplier(){
+  let gen = 1; for(const d of DEFENSE){ if(d.oilBonus){ gen += d.oilBonus*(S.def[d.id]||0); } }
+  return techMult("oil") * Math.pow(1.25, perkLvl("p_oil")) * rebirthFlat() * gen * boostMult();
+}
+function tapPower(){
+  return (1 + S.tapLvl) * techMult("tap") * Math.pow(3, perkLvl("p_tap")) * oilMultiplier();
+}
+function tapUpgradeCost(){ return Math.floor(25 * Math.pow(1.5, S.tapLvl)); }
+function oilPerSecRaw(){
+  let s=0; for(const g of GENERATORS){ s += (S.gen[g.id]||0)*g.prod; } return s;
+}
+function oilPerSec(){ return oilPerSecRaw() * oilMultiplier(); }
+function totalDPS(){
+  let s=0;
+  for(const d of DEFENSE){ s += (S.def[d.id]||0)*d.dps; }
+  for(const u of UNITS){ s += (S.unit[u.id]||0)*u.dps; }
+  s = Math.max(s, 1);
+  return s * techMult("dps") * Math.pow(1.30, perkLvl("p_dps")) * (1 + 0.10*S.rebirths);
+}
+function baseMaxHP(){
+  let s=100;
+  for(const d of DEFENSE){ s += (S.def[d.id]||0)*(d.hp||0); }
+  return s * techMult("hp") * Math.pow(1.30, perkLvl("p_hp"));
+}
+function offlineCapHours(){ return 4 + 2*perkLvl("p_off"); }
+
+/* cost helpers (geometric) */
+function unitCost(list,id,count){ const it=list.find(x=>x.id===id); return it.cost*Math.pow(it.mult,count); }
+function bulkCost(list,id,have,k){
+  const it=list.find(x=>x.id===id), m=it.mult, b=it.cost*Math.pow(m,have);
+  return b*(Math.pow(m,k)-1)/(m-1);
+}
+function maxAffordable(list,id,have){
+  const it=list.find(x=>x.id===id), m=it.mult, b=it.cost*Math.pow(m,have);
+  const k=Math.floor(Math.log(S.oil*(m-1)/b + 1)/Math.log(m));
+  return Math.max(0,k);
+}
+
+/* rebirth */
+function ppGain(){
+  if(S.runEarned < REBIRTH_REQ) return 0;
+  return Math.floor(3*Math.pow(S.runEarned/REBIRTH_REQ, 0.45));
+}
+
+/* boosts */
+let BOOSTS=[]; // {mult, until}
+function boostMult(){ let m=1; const now=Date.now(); for(const b of BOOSTS){ if(b.until>now) m*=b.mult; } return m; }
+
+/* =======================================================================
+   AUDIO  (Web Audio API — sin archivos externos)
+   ======================================================================= */
+const Audio = (function(){
+  let ctx=null, master=null, musicGain=null, musicTimer=null, started=false;
+  function init(){
+    if(ctx) return;
+    try{
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+      master = ctx.createGain(); master.gain.value=0.5; master.connect(ctx.destination);
+      musicGain = ctx.createGain(); musicGain.gain.value=0.0; musicGain.connect(master);
+    }catch(e){ ctx=null; }
+  }
+  function ensure(){ if(!ctx) init(); if(ctx && ctx.state==="suspended") ctx.resume(); }
+  function blip(freq,dur,type,vol,toGain){
+    if(!ctx||!S.sound) return;
+    const o=ctx.createOsc?ctx.createOsc():ctx.createOscillator();
+    const g=ctx.createGain();
+    o.type=type||"square"; o.frequency.value=freq;
+    g.gain.value=0; g.gain.linearRampToValueAtTime(vol||0.2, ctx.currentTime+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
+    o.connect(g); g.connect(toGain||master); o.start(); o.stop(ctx.currentTime+dur);
+  }
+  function noise(dur,vol,filterFreq){
+    if(!ctx||!S.sound) return;
+    const n=ctx.createBufferSource();
+    const buf=ctx.createBuffer(1, ctx.sampleRate*dur, ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,2);
+    n.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type="lowpass"; f.frequency.value=filterFreq||1200;
+    const g=ctx.createGain(); g.gain.value=vol||0.3;
+    n.connect(f); f.connect(g); g.connect(master); n.start();
+  }
+  const api = {
+    resume:ensure,
+    tap(){ blip(360+Math.random()*60,0.07,"square",0.12); },
+    buy(){ ensure(); blip(520,0.06,"square",0.18); setTimeout(()=>blip(780,0.08,"square",0.16),50); },
+    money(){ blip(880,0.05,"triangle",0.08); },
+    shot(){ noise(0.06,0.10,2500); },
+    explode(){ noise(0.35,0.4,500); blip(80,0.3,"sawtooth",0.18); },
+    alarm(){ ensure(); blip(440,0.18,"square",0.22); setTimeout(()=>blip(330,0.22,"square",0.22),200); },
+    win(){ ensure(); [523,659,784,1046].forEach((f,i)=>setTimeout(()=>blip(f,0.18,"triangle",0.2),i*90)); },
+    chest(){ ensure(); [659,784,988,1318].forEach((f,i)=>setTimeout(()=>blip(f,0.22,"triangle",0.22),i*80)); },
+    raid(){ ensure(); blip(160,0.5,"sawtooth",0.3); setTimeout(()=>blip(110,0.6,"sawtooth",0.3),150); },
+    setMusic(on){
+      ensure(); if(!ctx) return;
+      S.music=on;
+      musicGain.gain.linearRampToValueAtTime(on?0.18:0.0, ctx.currentTime+0.5);
+      if(on && !musicTimer){ startMusic(); }
+      if(!on && musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+    }
+  };
+  function startMusic(){
+    const scale=[110,146.8,164.8,196,220]; let step=0;
+    musicTimer=setInterval(()=>{
+      if(!ctx||!S.music) return;
+      const root=scale[step%scale.length];
+      blip(root,1.6,"sine",0.5,musicGain);
+      blip(root*2,1.2,"triangle",0.25,musicGain);
+      if(step%2===0) blip(root*3,0.8,"sine",0.12,musicGain);
+      step++;
+    },1500);
+  }
+  return api;
+})();
+
+/* =======================================================================
+   SPRITES (pixel art procedural -> offscreen canvas)
+   ======================================================================= */
+const SPRITES={};
+function px(g,x,y,w,h,c){ g.fillStyle=c; g.fillRect(x,y,w,h); }
+function makeSprite(name,w,h,fn){
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const g=c.getContext("2d"); g.imageSmoothingEnabled=false; fn(g);
+  SPRITES[name]=c; return c;
+}
+function buildSprites(){
+  // palette
+  const steel="#5b6b73", dark="#2b3338", lite="#8fa1a8", oil="#1a1410", gun="#3a4248";
+  const sand="#caa86a", green="#3f5b34", camo="#4a5d33", red="#c0392b", glass="#7fd0ff";
+
+  makeSprite("pump",16,16,g=>{ px(g,3,9,10,5,dark); px(g,5,5,2,6,steel); px(g,2,4,8,2,gun); px(g,9,3,3,2,red); px(g,3,13,10,2,oil); });
+  makeSprite("derrick",16,16,g=>{ px(g,7,2,2,12,steel); px(g,4,12,8,3,dark); for(let i=0;i<5;i++){px(g,5,3+i*2,6,1,lite);} px(g,6,1,4,2,red); });
+  makeSprite("refinery",16,16,g=>{ px(g,2,6,12,9,steel); px(g,4,2,2,5,gun); px(g,9,3,2,4,gun); px(g,3,8,10,5,dark); px(g,4,4,1,2,red); });
+  makeSprite("edrone",16,16,g=>{ px(g,5,6,6,4,gun); px(g,2,5,3,1,steel); px(g,11,5,3,1,steel); px(g,7,10,2,3,oil); px(g,6,7,4,2,glass); });
+  makeSprite("platform",16,16,g=>{ px(g,1,11,14,4,oil); px(g,3,4,3,8,steel); px(g,10,4,3,8,steel); px(g,2,3,12,2,gun); px(g,6,1,4,3,red); });
+  makeSprite("quantum",16,16,g=>{ px(g,3,3,10,10,dark); px(g,6,6,4,4,glass); px(g,5,5,6,1,blueC()); px(g,7,1,2,3,steel); function blueC(){return "#39c0ff";} });
+  makeSprite("fusion",16,16,g=>{ px(g,2,4,12,9,gun); px(g,5,6,6,5,"#ff8c00"); px(g,7,2,2,3,steel); px(g,3,13,10,2,dark); });
+
+  makeSprite("wall",16,16,g=>{ for(let y=4;y<14;y+=3)for(let x=2;x<14;x+=4){px(g,x,y,3,2,steel);} px(g,2,3,12,1,lite); px(g,2,13,12,2,dark); });
+  makeSprite("turret",16,16,g=>{ px(g,4,9,8,5,gun); px(g,6,4,4,5,steel); px(g,9,5,5,2,dark); px(g,6,3,4,1,red); });
+  makeSprite("bunker",16,16,g=>{ px(g,2,7,12,7,dark); px(g,3,5,10,3,steel); px(g,6,8,4,3,oil); px(g,4,6,8,1,lite); });
+  makeSprite("radar",16,16,g=>{ px(g,7,7,2,7,steel); for(let i=0;i<5;i++)px(g,4+i,4+i,2,1,"#39c0ff"); px(g,3,3,8,1,gun); });
+  makeSprite("hangar",16,16,g=>{ px(g,2,6,12,8,steel); px(g,4,9,8,5,dark); px(g,2,5,12,1,lite); px(g,6,10,4,1,glass); });
+  makeSprite("genpow",16,16,g=>{ px(g,3,5,10,9,gun); px(g,5,7,6,5,"#ffd24a"); px(g,7,3,2,2,steel); });
+
+  makeSprite("soldier",12,12,g=>{ px(g,5,2,3,3,"#e8c39e"); px(g,4,5,5,4,camo); px(g,4,9,2,3,dark); px(g,7,9,2,3,dark); px(g,8,5,4,1,gun); });
+  makeSprite("sniper",12,12,g=>{ px(g,5,2,3,3,"#e8c39e"); px(g,4,5,5,4,green); px(g,9,6,3,1,gun); px(g,4,9,4,3,dark); });
+  makeSprite("tank",16,12,g=>{ px(g,1,7,14,4,camo); px(g,3,4,8,3,green); px(g,10,5,6,2,gun); for(let x=1;x<15;x+=3)px(g,x,10,2,2,dark); });
+  makeSprite("heli",16,12,g=>{ px(g,4,5,8,4,gun); px(g,11,6,4,2,gun); px(g,1,3,14,1,lite); px(g,5,6,3,2,glass); px(g,6,9,2,2,dark); });
+  makeSprite("jet",16,12,g=>{ px(g,2,5,12,2,steel); px(g,5,3,5,6,gun); px(g,13,5,3,2,red); px(g,4,7,6,1,dark); });
+  makeSprite("arty",16,12,g=>{ px(g,2,7,10,4,camo); px(g,8,3,8,2,gun); for(let x=2;x<12;x+=3)px(g,x,10,2,2,dark); });
+  makeSprite("missile",16,12,g=>{ px(g,1,7,12,4,camo); px(g,4,3,3,4,red); px(g,8,2,3,5,red); px(g,2,5,2,2,steel); for(let x=1;x<13;x+=3)px(g,x,10,2,2,dark); });
+
+  // enemies
+  makeSprite("e_soldier",12,12,g=>{ px(g,5,2,3,3,"#caa"); px(g,4,5,5,4,red); px(g,4,9,2,3,dark); px(g,7,9,2,3,dark); });
+  makeSprite("e_tank",16,12,g=>{ px(g,1,7,14,4,"#5a2222"); px(g,3,4,8,3,red); px(g,0,5,6,2,gun); for(let x=1;x<15;x+=3)px(g,x,10,2,2,dark); });
+  makeSprite("e_heli",16,12,g=>{ px(g,4,5,8,4,"#5a2222"); px(g,1,6,4,2,gun); px(g,1,3,14,1,red); px(g,8,6,3,2,glass); });
+  makeSprite("e_drone",12,12,g=>{ px(g,4,4,4,4,red); px(g,2,3,2,1,gun); px(g,8,3,2,1,gun); px(g,5,5,2,2,"#ff0"); });
+  makeSprite("e_boss",28,24,g=>{ px(g,2,8,24,12,"#3a1010"); px(g,5,3,18,6,red); px(g,0,10,6,4,gun); px(g,9,11,10,4,"#ff8c00"); for(let x=3;x<25;x+=4)px(g,x,19,3,4,dark); px(g,7,4,3,2,"#ff0"); px(g,17,4,3,2,"#ff0"); });
+
+  // base HQ
+  makeSprite("hq",40,32,g=>{
+    px(g,2,12,36,18,steel); px(g,4,8,32,5,gun);
+    px(g,6,14,8,6,oil); px(g,26,14,8,6,oil); px(g,16,16,8,8,dark);
+    px(g,4,7,32,1,lite); px(g,17,3,6,5,gun); px(g,19,1,2,2,red);
+    px(g,2,28,36,3,dark); px(g,18,18,4,6,"#ffd24a");
+  });
+  // ground tile detail handled in render
+}
+
+/* =======================================================================
+   RENDER + COMBAT ENTITIES
+   ======================================================================= */
+const canvas=document.getElementById("scene");
+const ctx2=canvas.getContext("2d");
+let W=0,H=0,DPR=1, cx=0, cy=0, baseR=40;
+function resize(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=r.width; H=r.height;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  ctx2.setTransform(DPR,0,0,DPR,0,0);
+  ctx2.imageSmoothingEnabled=false;
+  cx=W/2; cy=H*0.56; baseR=Math.max(34,Math.min(W,H)*0.13);
+}
+window.addEventListener("resize",resize);
+
+let enemies=[], projectiles=[], particles=[], floaters=[];
+let shotTimer=0, pumpAnim=0;
+
+function spawnEnemy(hp,type,boss){
+  const ang=Math.random()*Math.PI*2;
+  const rad=Math.max(W,H)*0.62;
+  const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad*0.7;
+  enemies.push({x,y,hp,maxhp:hp,type,boss:!!boss,
+    spd:(boss?14:24+Math.random()*14), d:9999,
+    dmg:(boss? 18:4)*Math.pow(1.16,S.wave)});
+}
+function startWave(){
+  S.wave++; enemies=[];
+  const isBoss = S.wave%5===0;
+  const count=Math.min(4+Math.floor(S.wave*0.8), 16);
+  const hpBase=28*Math.pow(1.20,S.wave);
+  const etypes=["e_soldier"];
+  if(S.wave>=2) etypes.push("e_drone");
+  if(S.wave>=4) etypes.push("e_tank");
+  if(S.wave>=6) etypes.push("e_heli");
+  for(let i=0;i<count;i++){ spawnEnemy(hpBase*(0.7+Math.random()*0.6), etypes[Math.floor(Math.random()*etypes.length)]); }
+  if(isBoss) spawnEnemy(hpBase*count*1.6, "e_boss", true);
+  S.inWave=true;
+  showAlert(isBoss? t("bossIncoming"): t("waveIncoming"));
+  Audio.alarm();
+}
+function killEnemy(e){
+  const reward = e.maxhp * 0.1 * rebirthFlat() * boostMult();
+  addOil(reward, e.x, e.y);
+  burst(e.x,e.y, e.boss?38:14, e.boss?"#ff8c00":"#ffae5a");
+  if(e.boss){ S.bossKills++; Audio.explode(); shake(8); } else { Audio.explode(); }
+}
+function winWave(){
+  S.inWave=false; S.waveCleared=Math.max(S.waveCleared,S.wave);
+  S.waveTimer=Math.max(14, 30-S.wave*0.2);
+  const bonus=oilPerSec()*8 + 50;
+  addOil(bonus, cx, cy-baseR);
+  showAlert(t("waveCleared")); Audio.win();
+  if(Math.random()<0.35){ giveChest(0.6); }
+  checkMissions();
+}
+function raid(){
+  S.inWave=false; const lost=S.oil*0.12; S.oil-=lost;
+  S.baseHP=baseMaxHP(); S.waveTimer=Math.max(16,30-S.wave*0.2); enemies=[];
+  showAlert(t("raided")); flashRed(); Audio.raid(); shake(10);
+  toast("-"+fmt(lost)+" 🛢️");
+}
+
+function combatTick(dt){
+  if(!S.inWave){
+    S.waveTimer-=dt;
+    const mhp=baseMaxHP();
+    S.baseHP=Math.min(mhp, S.baseHP + mhp*0.06*dt);
+    if(S.waveTimer<=0) startWave();
+    return;
+  }
+  const dps=totalDPS();
+  // move enemies + base damage
+  for(const e of enemies){
+    const dx=cx-e.x, dy=cy-e.y, dist=Math.hypot(dx,dy);
+    e.d=dist;
+    if(dist>baseR+10){ e.x+=dx/dist*e.spd*dt; e.y+=dy/dist*e.spd*dt; }
+    else { S.baseHP-=e.dmg*dt; if(Math.random()<dt*4) burst(e.x,e.y,4,"#ff5050"); }
+  }
+  // focus fire
+  enemies.sort((a,b)=>a.d-b.d);
+  let dmg=dps*dt;
+  for(const e of enemies){ if(dmg<=0)break; const a=Math.min(e.hp,dmg); e.hp-=a; dmg-=a; }
+  // visual shots toward nearest
+  shotTimer-=dt;
+  if(shotTimer<=0 && enemies.length){
+    shotTimer=0.10;
+    const target=enemies[0];
+    const slots=turretSlots();
+    for(let i=0;i<Math.min(slots.length,3);i++){
+      const sp=slots[(Math.floor(Math.random()*slots.length))];
+      projectiles.push({x:sp.x,y:sp.y,tx:target.x,ty:target.y,t:0,life:0.22});
+      burst(sp.x,sp.y,2,"#ffd24a",1);
+    }
+    Audio.shot();
+  }
+  // remove dead
+  let alive=[];
+  for(const e of enemies){ if(e.hp>0) alive.push(e); else killEnemy(e); }
+  enemies=alive;
+  if(S.baseHP<=0){ raid(); return; }
+  if(enemies.length===0) winWave();
+}
+
+function turretSlots(){
+  const n=Math.max(3, Math.min(8, 2+ (S.def.turret||0) + (S.def.hangar||0)));
+  const arr=[];
+  for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2 - Math.PI/2; arr.push({x:cx+Math.cos(a)*baseR*0.92, y:cy+Math.sin(a)*baseR*0.62}); }
+  return arr;
+}
+
+/* particles */
+function burst(x,y,n,color,small){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, sp=(small?20:50)*Math.random()+10;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-20,life:0.5+Math.random()*0.4,
+      max:0.9,color,size:small?2:(2+Math.random()*3)});
+  }
+}
+function smoke(x,y){ particles.push({x,y,vx:(Math.random()-0.5)*10,vy:-15-Math.random()*10,life:1.2,max:1.2,color:"#5a5a5a",size:3,smoke:true}); }
+function addFloater(x,y,txt){ floaters.push({x,y,txt,life:1.0}); }
+
+/* screen shake / flash */
+let shakeT=0, shakeMag=0;
+function shake(m){ shakeMag=m; shakeT=0.3; }
+function flashRed(){ const f=document.getElementById("flash"); f.style.transition="none"; f.style.opacity=0.6;
+  requestAnimationFrame(()=>{ f.style.transition="opacity .6s"; f.style.opacity=0; }); }
+let alertT=0;
+function showAlert(txt){ const a=document.getElementById("alert"); a.textContent=txt; a.classList.add("show"); alertT=2.2; }
+
+function render(dt){
+  // shake
+  let ox=0,oy=0;
+  if(shakeT>0){ shakeT-=dt; ox=(Math.random()-0.5)*shakeMag; oy=(Math.random()-0.5)*shakeMag; }
+  ctx2.save(); ctx2.translate(ox,oy);
+
+  // ground
+  const g=ctx2.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#1a1d18"); g.addColorStop(0.4,"#2d2a1d"); g.addColorStop(1,"#3a3320");
+  ctx2.fillStyle=g; ctx2.fillRect(-20,-20,W+40,H+40);
+  // dunes
+  ctx2.fillStyle="rgba(0,0,0,0.12)";
+  for(let i=0;i<5;i++){ const yy=H*0.2+i*H*0.16; ctx2.fillRect(0,yy,W,3); }
+  // base shadow
+  ctx2.fillStyle="rgba(0,0,0,0.35)";
+  ctx2.beginPath(); ctx2.ellipse(cx,cy+baseR*0.6,baseR*1.2,baseR*0.5,0,0,Math.PI*2); ctx2.fill();
+
+  // generators around base (rings)
+  drawGenerators();
+
+  // base
+  const hqw=baseR*1.6, hqh=baseR*1.3;
+  ctx2.drawImage(SPRITES.hq, cx-hqw/2, cy-hqh*0.7, hqw, hqh);
+
+  // turrets
+  const slots=turretSlots();
+  for(const sp of slots){
+    let ang=-Math.PI/2;
+    if(enemies.length){ ang=Math.atan2(enemies[0].y-sp.y, enemies[0].x-sp.x); }
+    ctx2.save(); ctx2.translate(sp.x,sp.y); ctx2.rotate(ang+Math.PI/2);
+    ctx2.drawImage(SPRITES.turret,-9,-9,18,18); ctx2.restore();
+  }
+  // units near base
+  drawUnits();
+
+  // enemies
+  for(const e of enemies){
+    const spr=SPRITES[e.type]||SPRITES.e_soldier;
+    const w=e.boss?42:18, h=e.boss?36:18;
+    ctx2.drawImage(spr, e.x-w/2, e.y-h/2, w, h);
+    // hp bar
+    const bw=e.boss?44:20;
+    ctx2.fillStyle="#000"; ctx2.fillRect(e.x-bw/2, e.y-h/2-6, bw,3);
+    ctx2.fillStyle=e.boss?"#ff8c00":"#ff4d4d"; ctx2.fillRect(e.x-bw/2, e.y-h/2-6, bw*(e.hp/e.maxhp),3);
+  }
+  // projectiles
+  ctx2.strokeStyle="#ffe08a"; ctx2.lineWidth=2; ctx2.lineCap="round";
+  for(const p of projectiles){
+    const px2=p.x+(p.tx-p.x)*(p.t/p.life), py2=p.y+(p.ty-p.y)*(p.t/p.life);
+    ctx2.beginPath(); ctx2.moveTo(px2,py2); ctx2.lineTo(px2-(p.tx-p.x)*0.04, py2-(p.ty-p.y)*0.04); ctx2.stroke();
+  }
+  // particles
+  for(const pt of particles){
+    const al=Math.max(0,pt.life/pt.max);
+    ctx2.globalAlpha=al; ctx2.fillStyle=pt.color;
+    ctx2.fillRect(pt.x-pt.size/2, pt.y-pt.size/2, pt.size, pt.size);
+  }
+  ctx2.globalAlpha=1;
+  // floaters
+  ctx2.font="bold 12px Courier New"; ctx2.textAlign="center";
+  for(const f of floaters){ ctx2.globalAlpha=Math.max(0,f.life); ctx2.fillStyle="#ffd24a"; ctx2.fillText(f.txt,f.x,f.y); }
+  ctx2.globalAlpha=1;
+
+  ctx2.restore();
+}
+function drawGenerators(){
+  let ring=0, idx=0;
+  for(const gdef of GENERATORS){
+    const cnt=S.gen[gdef.id]||0; if(cnt<=0) continue;
+    const show=Math.min(cnt, 6);
+    const rad=baseR*1.5 + ring*26;
+    for(let i=0;i<show;i++){
+      const a=(i/Math.max(show,3))*Math.PI*2 + idx*0.6 + pumpAnim*0.02;
+      const x=cx+Math.cos(a)*rad, y=cy+Math.sin(a)*rad*0.62;
+      const bob=Math.sin(pumpAnim*3 + i)*1.5;
+      ctx2.drawImage(SPRITES[gdef.sprite], x-9, y-9+bob, 18,18);
+      if(Math.random()<0.02) smoke(x,y-8);
+    }
+    ring++; idx++;
+  }
+}
+function drawUnits(){
+  let placed=0;
+  for(const u of UNITS){
+    const cnt=S.unit[u.id]||0; if(cnt<=0) continue;
+    const show=Math.min(cnt,4);
+    for(let i=0;i<show;i++){
+      const a=Math.PI/2 + (placed-3)*0.32;
+      const x=cx+Math.cos(a)*baseR*1.15, y=cy+Math.sin(a)*baseR*0.8+10;
+      const spr=SPRITES[u.sprite];
+      ctx2.drawImage(spr, x-spr.width/2, y-spr.height/2, spr.width, spr.height);
+      placed++;
+      if(placed>=8) return;
+    }
+  }
+}
+
+function updateParticles(dt){
+  for(const p of particles){ p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.smoke) p.vy+=120*dt; else p.vy-=8*dt; }
+  particles=particles.filter(p=>p.life>0); if(particles.length>260) particles.splice(0,particles.length-260);
+  for(const p of projectiles){ p.t+=dt; if(p.t>=p.life){ burst(p.tx,p.ty,3,"#ffae5a",1);} }
+  projectiles=projectiles.filter(p=>p.t<p.life);
+  for(const f of floaters){ f.life-=dt; f.y-=24*dt; }
+  floaters=floaters.filter(f=>f.life>0);
+}
+
+/* =======================================================================
+   ECONOMY ACTIONS
+   ======================================================================= */
+function addOil(amount,x,y){
+  S.oil+=amount; S.runEarned+=amount; S.totalLifetime+=amount;
+  if(x!==undefined && amount>0 && Math.random()<0.5) addFloater(x,y,"+"+fmt(amount));
+}
+function manualTap(px2,py2){
+  const p=tapPower(); addOil(p, px2, py2);
+  burst(px2,py2,5,"#1a1410"); for(let i=0;i<3;i++) burst(px2,py2,2,"#3a2a18",1);
+  Audio.tap(); Audio.money();
+}
+function buyGen(id){ buyFrom(GENERATORS,S.gen,id); }
+function buyDef(id){ buyFrom(DEFENSE,S.def,id); }
+function buyUnit(id){ buyFrom(UNITS,S.unit,id); }
+function buyFrom(list,store,id){
+  const have=store[id]||0;
+  let k=1; if(BUYMODE==="10") k=10; else if(BUYMODE==="max") k=maxAffordable(list,id,have);
+  if(k<=0) return;
+  const cost=bulkCost(list,id,have,k);
+  if(S.oil<cost){ // for max k already affordable; for x1/x10 maybe not
+    if(BUYMODE!=="max"){ // try as many as affordable up to k
+      k=Math.min(k,maxAffordable(list,id,have)); if(k<=0) return;
+    } else return;
+  }
+  const finalCost=bulkCost(list,id,have,k);
+  if(S.oil<finalCost) return;
+  S.oil-=finalCost; store[id]=have+k;
+  Audio.buy(); checkMissions(); renderPanel(); refreshHUD();
+}
+function upgradeTap(){
+  const c=tapUpgradeCost(); if(S.oil<c) return;
+  S.oil-=c; S.tapLvl++; Audio.buy(); renderPanel(); refreshHUD();
+}
+function buyTech(id){
+  const tc=TECHS.find(x=>x.id===id); if(!tc||S.tech[id]) return;
+  if(S.runEarned<tc.req || S.oil<tc.cost) return;
+  S.oil-=tc.cost; S.tech[id]=true; Audio.buy(); checkMissions(); renderPanel(); refreshHUD();
+}
+function buyPerk(id){
+  const lvl=perkLvl(id), cost=PERK_COST(lvl);
+  if(S.pp<cost) return;
+  S.pp-=cost; S.perks[id]=lvl+1; Audio.buy(); renderPanel(); refreshHUD();
+}
+function doRebirth(){
+  const gain=ppGain(); if(gain<=0) return;
+  S.pp+=gain; S.rebirths++;
+  const keep={lang:S.lang,sound:S.sound,music:S.music,rebirths:S.rebirths,pp:S.pp,perks:S.perks,
+    bossKills:S.bossKills,missionsDone:S.missionsDone,lastDaily:S.lastDaily,totalLifetime:S.totalLifetime};
+  S=Object.assign(freshRun(),keep,{lastSaved:Date.now()});
+  enemies=[];projectiles=[];particles=[];BOOSTS=[];
+  closeModal(); Audio.win(); checkMissions(); switchTab("extract"); refreshHUD();
+  toast("+"+gain+" PP 🎖️");
+}
+
+/* missions / chests / daily */
+function checkMissions(){
+  for(const m of MISSIONS){
+    if(!S.missionsDone[m.id] && m.chk(S)){ /* mark claimable; auto handled in panel */ }
+  }
+  updateTabBadges();
+}
+function claimMission(id){
+  const m=MISSIONS.find(x=>x.id===id); if(!m||S.missionsDone[id]||!m.chk(S)) return;
+  S.missionsDone[id]=true; if(m.r>0) addOil(m.r,cx,cy-baseR);
+  Audio.chest(); toast(t("reward")+": +"+fmt(m.r)+" 🛢️");
+  renderPanel(); refreshHUD(); updateTabBadges();
+}
+function giveChest(scaleMin){
+  const minutes=(scaleMin||1)*(2+Math.random()*8);
+  const reward=Math.max(oilPerSec()*60*minutes, 100*Math.pow(2,S.rebirths));
+  addOil(reward,cx,cy-baseR);
+  if(Math.random()<0.5){ const mult=2+Math.floor(Math.random()*2); BOOSTS.push({mult,until:Date.now()+60000}); toast(t("boostX2").replace("{m}",mult)); }
+  return reward;
+}
+function claimDaily(){
+  const now=Date.now();
+  if(now-S.lastDaily < 20*3600*1000) return;
+  S.lastDaily=now;
+  const reward=giveChest(2);
+  Audio.chest();
+  openModal(`<h2>🎁 ${t("chestWon")}</h2><p class="num">+${fmt(reward)} 🛢️</p>
+    <div class="row"><button class="big-btn" onclick="closeModal()">${t("close")}</button></div>`);
+  renderPanel(); refreshHUD(); updateTabBadges();
+}
+
+/* =======================================================================
+   UI
+   ======================================================================= */
+let CURTAB="extract", BUYMODE="1";
+const TABS=[
+  {id:"extract", label:"tabExtract"},
+  {id:"defense", label:"tabDefense"},
+  {id:"units",   label:"tabUnits"},
+  {id:"tech",    label:"tabTech"},
+  {id:"missions",label:"tabMissions"},
+  {id:"rebirth", label:"tabRebirth"},
+];
+function buildTabs(){
+  const el=document.getElementById("tabs"); el.innerHTML="";
+  for(const tb of TABS){
+    const b=document.createElement("button");
+    b.className="tab"+(tb.id===CURTAB?" active":""); b.dataset.id=tb.id;
+    b.innerHTML=`<span>${t(tb.label)}</span><span class="badge" data-badge="${tb.id}" style="display:none"></span>`;
+    b.onclick=()=>switchTab(tb.id);
+    el.appendChild(b);
+  }
+  updateTabBadges();
+}
+function switchTab(id){ CURTAB=id; document.querySelectorAll(".tab").forEach(t2=>t2.classList.toggle("active",t2.dataset.id===id)); renderPanel(); }
+function updateTabBadges(){
+  let mcount=0;
+  for(const m of MISSIONS){ if(!S.missionsDone[m.id] && m.chk(S)) mcount++; }
+  document.querySelectorAll("[data-badge]").forEach(b=>{
+    if(b.dataset.badge==="missions" && mcount>0){ b.style.display="inline-block"; b.textContent=mcount; }
+    else b.style.display="none";
+  });
+}
+
+function card(spr,nameHtml,subHtml,btnHtml,extraClass){
+  return `<div class="card ${extraClass||''}">
+    <canvas class="spr" width="16" height="16" data-spr="${spr}"></canvas>
+    <div class="info"><div class="nm">${nameHtml}</div><div class="sub">${subHtml}</div></div>
+    ${btnHtml}</div>`;
+}
+function priceBtn(cost,onclick,label){
+  const can=S.oil>=cost;
+  return `<button class="buy ${can?'':'cant'}" ${can?`data-act="${onclick}"`:''}>
+    ${label||t("buy")}<span class="c">${fmt(cost)} 🛢️</span></button>`;
+}
+
+function renderPanel(){
+  const c=document.getElementById("content");
+  let html="";
+  if(CURTAB==="extract"){
+    html+=`<div class="section-note">${t("extractNote")}</div>`;
+    // manual drill upgrade
+    const tc=tapUpgradeCost();
+    html+=card("pump", t("upgradeTap"),
+      `${t("tapPower")}: <b>+${fmt(tapPower())}</b> ${t("each")}`,
+      priceBtn(tc,"tap","+1"));
+    for(const g of GENERATORS){
+      const have=S.gen[g.id]||0;
+      const k=buyCount(GENERATORS,g.id,have);
+      const cost=bulkCost(GENERATORS,g.id,have,Math.max(k,1));
+      const sub=`<span class="owned-pill">${t("owned")}: ${have}</span>  <b>+${fmt(g.prod*oilMultiplier())}</b>/s ${t("each")}`;
+      html+=card(g.sprite, nm(g.name), sub, priceBtn(cost,"gen:"+g.id, t("buy")+(k>1?` x${k}`:"")));
+    }
+  }
+  else if(CURTAB==="defense"){
+    html+=`<div class="section-note">${t("defenseNote")}</div>`;
+    for(const d of DEFENSE){
+      const have=S.def[d.id]||0, k=buyCount(DEFENSE,d.id,have), cost=bulkCost(DEFENSE,d.id,have,Math.max(k,1));
+      let bits=[`<span class="owned-pill">${have}</span>`];
+      if(d.dps) bits.push(`<b>+${fmt(d.dps*techMult("dps")*Math.pow(1.3,perkLvl("p_dps")))}</b> ${t("dmg")}`);
+      if(d.hp) bits.push(`+${fmt(d.hp*techMult("hp")*Math.pow(1.3,perkLvl("p_hp")))} ${t("hp")}`);
+      if(d.oilBonus) bits.push(`+${Math.round(d.oilBonus*100)}% 🛢️`);
+      html+=card(d.sprite, nm(d.name), bits.join("  "), priceBtn(cost,"def:"+d.id, t("buy")+(k>1?` x${k}`:"")));
+    }
+  }
+  else if(CURTAB==="units"){
+    html+=`<div class="section-note">${t("unitsNote")}</div>`;
+    for(const u of UNITS){
+      const have=S.unit[u.id]||0, k=buyCount(UNITS,u.id,have), cost=bulkCost(UNITS,u.id,have,Math.max(k,1));
+      const sub=`<span class="owned-pill">${have}</span>  <b>+${fmt(u.dps*techMult("dps")*Math.pow(1.3,perkLvl("p_dps")))}</b> ${t("dmg")} ${t("each")}`;
+      html+=card(u.sprite, nm(u.name), sub, priceBtn(cost,"unit:"+u.id, t("buy")+(k>1?` x${k}`:"")));
+    }
+  }
+  else if(CURTAB==="tech"){
+    html+=`<div class="section-note">${t("techNote")}</div>`;
+    for(const tech of TECHS){
+      const done=!!S.tech[tech.id];
+      const unlocked=S.runEarned>=tech.req;
+      const label={oil:"🛢️ x"+tech.val, tap:"⛏️ x"+tech.val, hp:"🛡️ x"+tech.val, dps:"💥 x"+tech.val}[tech.eff];
+      let btn;
+      if(done) btn=`<button class="buy" style="background:#1d4427;color:#5dff8f;box-shadow:0 3px 0 #0c2113">✓</button>`;
+      else if(!unlocked) btn=`<button class="buy cant">${t("requires")}<span class="c">${fmt(tech.req)} 🛢️</span></button>`;
+      else btn=priceBtn(tech.cost,"tech:"+tech.id, t("buy"));
+      html+=card("genpow", nm(tech.name), label, btn, done?"done":(unlocked?"":"locked"));
+    }
+  }
+  else if(CURTAB==="missions"){
+    let any=false;
+    for(const m of MISSIONS){
+      const done=!!S.missionsDone[m.id], ready=!done && m.chk(S);
+      any=any||!done;
+      let btn;
+      if(done) btn=`<button class="buy" style="background:#1d4427;color:#5dff8f;box-shadow:0 3px 0 #0c2113">✓</button>`;
+      else if(ready) btn=`<button class="buy" data-act="mission:${m.id}">${t("claim")}<span class="c">+${fmt(m.r)} 🛢️</span></button>`;
+      else btn=`<button class="buy cant">${t("reward")}<span class="c">+${fmt(m.r)} 🛢️</span></button>`;
+      html+=card(ready?"quantum":"radar", nm(m.d), done?"✓ "+t("claimed"):(ready?"⭐ "+t("claim")+"!":"…"), btn, done?"done":(ready?"":"locked"));
+    }
+    if(!any) html+=`<div class="section-note">${t("noMissions")}</div>`;
+    // daily
+    const wait=20*3600*1000-(Date.now()-S.lastDaily);
+    if(wait<=0){
+      html+=`<button class="big-btn" data-act="daily">🎁 ${t("daily")} — ${t("openChest")}</button>`;
+    } else {
+      html+=`<button class="big-btn dis">🎁 ${t("dailyWait").replace("{x}",fmtTime(wait/1000))}</button>`;
+    }
+  }
+  else if(CURTAB==="rebirth"){
+    const gain=ppGain();
+    html+=`<div class="card" style="flex-direction:column;align-items:stretch">
+      <div class="nm" style="color:#ffd24a;font-size:15px">⚔️ ${t("rebirthTitle")}</div>
+      <div class="sub" style="margin-top:4px;line-height:1.4">${t("rebirthDesc")}</div></div>`;
+    html+=`<div class="card"><div class="info"><div class="nm">${t("pp")}</div>
+      <div class="sub"><b>${S.pp}</b> · ${t("rebirths")}: ${S.rebirths}</div></div></div>`;
+    if(S.runEarned>=REBIRTH_REQ){
+      html+=`<button class="big-btn" data-act="rebirth">${t("rebirthBtn")} · +${gain} PP</button>`;
+    } else {
+      html+=`<button class="big-btn dis">${t("rebirthNeed").replace("{x}",fmt(REBIRTH_REQ))}</button>`;
+      html+=`<div class="section-note" style="text-align:center">${fmt(S.runEarned)} / ${fmt(REBIRTH_REQ)} 🛢️</div>`;
+    }
+    html+=`<div class="section-note" style="margin-top:14px;color:#ffd24a;font-weight:bold">🎖️ ${t("prestigeShop")}</div>`;
+    for(const p of PERKS){
+      const lvl=perkLvl(p.id), cost=PERK_COST(lvl), can=S.pp>=cost;
+      const btn=`<button class="buy ${can?'':'cant'}" ${can?`data-act="perk:${p.id}"`:''}>${t("lvl")} ${lvl}→${lvl+1}<span class="c">${cost} PP</span></button>`;
+      html+=card("fusion", t(p.name)+` <span class="owned-pill">${t("lvl")} ${lvl}</span>`, t(p.desc), btn);
+    }
+  }
+  c.innerHTML=html;
+  // draw sprite canvases
+  c.querySelectorAll("[data-spr]").forEach(cv=>{
+    const s=SPRITES[cv.dataset.spr]; if(!s) return;
+    const g=cv.getContext("2d"); g.imageSmoothingEnabled=false; g.clearRect(0,0,16,16); g.drawImage(s,0,0,16,16);
+  });
+  // wire buttons
+  c.querySelectorAll("[data-act]").forEach(b=>{
+    b.onclick=()=>{ const a=b.dataset.act;
+      if(a==="tap") upgradeTap();
+      else if(a==="daily") claimDaily();
+      else if(a==="rebirth") confirmRebirth();
+      else if(a.startsWith("gen:")) buyGen(a.slice(4));
+      else if(a.startsWith("def:")) buyDef(a.slice(4));
+      else if(a.startsWith("unit:")) buyUnit(a.slice(5));
+      else if(a.startsWith("tech:")) buyTech(a.slice(5));
+      else if(a.startsWith("perk:")) buyPerk(a.slice(5));
+      else if(a.startsWith("mission:")) claimMission(a.slice(8));
+    };
+  });
+}
+function buyCount(list,id,have){
+  if(BUYMODE==="1") return 1; if(BUYMODE==="10") return 10;
+  return Math.max(1,maxAffordable(list,id,have));
+}
+
+/* HUD refresh */
+let hudAcc=0;
+function refreshHUD(){
+  document.getElementById("hOil").textContent=fmt(S.oil)+" 🛢️";
+  document.getElementById("hRate").textContent=fmt(oilPerSec())+"/s";
+  document.getElementById("hMult").textContent="x"+fmt(oilMultiplier());
+  document.getElementById("hWave").textContent= S.inWave? (S.wave+" ⚔") : (S.wave>0? S.wave+"":"—");
+  const hp=Math.max(0,S.baseHP), mhp=baseMaxHP(), pct=Math.max(0,Math.min(100,hp/mhp*100));
+  document.getElementById("hHpFill").style.width=pct+"%";
+  document.getElementById("hHpFill").style.background= pct<30? "linear-gradient(90deg,#c0392b,#ff4d4d)":"linear-gradient(90deg,#2bd05a,#5dff8f)";
+  document.getElementById("hHpTxt").textContent= S.inWave? t("defending") : Math.round(pct)+"%";
+  // tap hint -> show wave timer when between waves
+  const th=document.getElementById("tapHint");
+  if(!S.inWave && S.wave>0){ th.textContent=t("nextWave").replace("{x}",Math.ceil(S.waveTimer)); }
+  else if(S.inWave){ th.textContent=t("totalDps")+": "+fmt(totalDPS()); }
+  else th.textContent=t("tapHint");
+  // boosts
+  const bx=document.getElementById("boosts"); const now=Date.now();
+  BOOSTS=BOOSTS.filter(b=>b.until>now);
+  bx.innerHTML=BOOSTS.map(b=>`<span class="boost-tag">⚡x${b.mult} ${Math.ceil((b.until-now)/1000)}s</span>`).join("");
+}
+
+/* modal helpers */
+function openModal(html){ document.getElementById("modalBox").innerHTML=html; document.getElementById("modal").classList.add("show"); }
+function closeModal(){ document.getElementById("modal").classList.remove("show"); }
+function confirmRebirth(){
+  openModal(`<h2>⚔️ ${t("rebirthTitle")}</h2><p>${t("rebirthConfirm")}</p>
+    <p>${t("rebirthGain")}: <span class="num">+${ppGain()} PP</span></p>
+    <div class="row"><button class="big-btn ghost" onclick="closeModal()">${t("cancel")}</button>
+    <button class="big-btn" id="doRb">${t("rebirthBtn")}</button></div>`);
+  document.getElementById("doRb").onclick=doRebirth;
+}
+function openSettings(){
+  openModal(`<h2>⚙ ${t("settings")}</h2>
+    <div class="card" style="margin-top:8px"><div class="info"><div class="nm">🌐 Idioma / Language</div></div>
+      <button class="buy" id="mLang">${LANG==="es"?"English":"Español"}</button></div>
+    <div class="card"><div class="info"><div class="nm">🔊 ${t("sound")}</div></div>
+      <button class="buy" id="mSound" style="${S.sound?'':'background:#26302a;color:#5b6b5b;box-shadow:0 3px 0 #11160f'}">${S.sound?"ON":"OFF"}</button></div>
+    <div class="card"><div class="info"><div class="nm">🎵 ${t("music")}</div></div>
+      <button class="buy" id="mMusic" style="${S.music?'':'background:#26302a;color:#5b6b5b;box-shadow:0 3px 0 #11160f'}">${S.music?"ON":"OFF"}</button></div>
+    <button class="big-btn" id="mSave">💾 ${t("save")}</button>
+    <button class="big-btn ghost" id="mReset" style="margin-top:8px;color:#ff4d4d">🗑️ ${t("reset")}</button>
+    <div class="section-note" style="margin-top:12px;text-align:center">${t("credits")}</div>
+    <button class="big-btn ghost" onclick="closeModal()" style="margin-top:8px">${t("close")}</button>`);
+  document.getElementById("mLang").onclick=()=>{ setLang(LANG==="es"?"en":"es"); openSettings(); };
+  document.getElementById("mSound").onclick=()=>{ S.sound=!S.sound; document.getElementById("bSound").textContent=S.sound?"🔊":"🔇"; document.getElementById("bSound").classList.toggle("on",S.sound); openSettings(); };
+  document.getElementById("mMusic").onclick=()=>{ Audio.setMusic(!S.music); openSettings(); };
+  document.getElementById("mSave").onclick=()=>{ save(); toast(t("saved")); };
+  document.getElementById("mReset").onclick=()=>{
+    openModal(`<h2>🗑️ ${t("reset")}</h2><p>${t("resetQ")}</p>
+      <div class="row"><button class="big-btn ghost" onclick="closeModal()">${t("cancel")}</button>
+      <button class="big-btn" id="rcfm" style="background:linear-gradient(180deg,#ff6b6b,#c0392b);box-shadow:0 4px 0 #7a1f1f">${t("yes")}</button></div>`);
+    document.getElementById("rcfm").onclick=()=>{ wipe(); };
+  };
+}
+
+/* language */
+function setLang(l){
+  LANG=l; S.lang=l;
+  document.documentElement.lang=l;
+  document.getElementById("bLang").textContent=l.toUpperCase();
+  document.querySelectorAll("[data-t]").forEach(e=>e.textContent=t(e.dataset.t));
+  buildTabs(); renderPanel(); refreshHUD();
+}
+
+/* toast */
+let toastT=0;
+function toast(msg){ const el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show"); toastT=2; }
+
+/* =======================================================================
+   SAVE / LOAD
+   ======================================================================= */
+const SAVE_KEY="MOTD_save_v1";
+let storageOK=true;
+function save(){
+  S.lastSaved=Date.now(); S.lang=LANG;
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
+  catch(e){ storageOK=false; }
+}
+function load(){
+  let raw=null;
+  try{ raw=localStorage.getItem(SAVE_KEY); }catch(e){ storageOK=false; }
+  if(!raw) return false;
+  try{
+    const d=JSON.parse(raw);
+    S=Object.assign(freshState(), d);
+    // sanitize
+    S.gen=S.gen||{}; S.def=S.def||{}; S.unit=S.unit||{}; S.tech=S.tech||{}; S.perks=S.perks||{}; S.missionsDone=S.missionsDone||{};
+    LANG=S.lang||"es";
+    // offline earnings
+    const now=Date.now(); const dt=Math.min((now-(S.lastSaved||now))/1000, offlineCapHours()*3600);
+    if(dt>30){
+      const earn=oilPerSec()*dt*0.5;
+      if(earn>1){ pendingOffline={earn,dt}; }
+    }
+    S.inWave=false; S.baseHP=Math.min(S.baseHP||100, baseMaxHP());
+    return true;
+  }catch(e){ return false; }
+}
+function wipe(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  S=freshState(); BOOSTS=[]; enemies=[];projectiles=[];particles=[];
+  closeModal(); setLang("es"); switchTab("extract"); refreshHUD(); save();
+}
+let pendingOffline=null;
+function showOffline(){
+  if(!pendingOffline) return;
+  const {earn,dt}=pendingOffline; pendingOffline=null;
+  addOil(earn);
+  openModal(`<h2>🪖 ${t("offlineTitle")}</h2>
+    <p>${t("offlineBody").replace("{t}",fmtTime(dt))}</p>
+    <p class="num">+${fmt(earn)} 🛢️</p>
+    <div class="row"><button class="big-btn" onclick="closeModal()">${t("collect")}</button></div>`);
+  refreshHUD();
+}
+
+/* =======================================================================
+   INPUT
+   ======================================================================= */
+function stagePoint(ev){
+  const r=canvas.getBoundingClientRect();
+  const e=ev.touches? ev.touches[0]||ev.changedTouches[0]:ev;
+  return {x:e.clientX-r.left, y:e.clientY-r.top};
+}
+function onTap(ev){
+  ev.preventDefault();
+  Audio.resume();
+  const p=stagePoint(ev);
+  manualTap(p.x,p.y);
+}
+canvas.addEventListener("touchstart",onTap,{passive:false});
+canvas.addEventListener("mousedown",e=>{ if(e.button===0) onTap(e); });
+
+document.getElementById("bLang").onclick=()=>{ Audio.resume(); setLang(LANG==="es"?"en":"es"); };
+document.getElementById("bSound").onclick=()=>{ Audio.resume(); S.sound=!S.sound;
+  const b=document.getElementById("bSound"); b.textContent=S.sound?"🔊":"🔇"; b.classList.toggle("on",S.sound); };
+document.getElementById("bMenu").onclick=()=>{ Audio.resume(); openSettings(); };
+document.querySelectorAll(".bm").forEach(b=>b.onclick=()=>{
+  BUYMODE=b.dataset.bm; document.querySelectorAll(".bm").forEach(x=>x.classList.toggle("active",x===b)); renderPanel();
+});
+document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
+
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) save(); });
+window.addEventListener("beforeunload",save);
+// start audio context on first interaction (mobile policy)
+document.body.addEventListener("touchstart",()=>Audio.resume(),{once:true});
+document.body.addEventListener("mousedown",()=>Audio.resume(),{once:true});
+
+/* =======================================================================
+   MAIN LOOP
+   ======================================================================= */
+let last=performance.now(), saveAcc=0, uiAcc=0;
+function loop(now){
+  let dt=(now-last)/1000; last=now; if(dt>0.25) dt=0.25;
+  pumpAnim+=dt;
+  // production
+  addOil(oilPerSec()*dt);
+  // combat
+  combatTick(dt);
+  updateParticles(dt);
+  // alert timer
+  if(alertT>0){ alertT-=dt; if(alertT<=0) document.getElementById("alert").classList.remove("show"); }
+  if(toastT>0){ toastT-=dt; if(toastT<=0) document.getElementById("toast").classList.remove("show"); }
+  // render
+  render(dt);
+  // throttled UI
+  uiAcc+=dt; if(uiAcc>0.1){ uiAcc=0; refreshHUD(); }
+  hudAcc+=dt; if(hudAcc>1.0){ hudAcc=0; if(CURTAB==="missions"||CURTAB==="rebirth"){ /* keep timers fresh */ } updateTabBadges(); }
+  // autosave
+  saveAcc+=dt; if(saveAcc>5){ saveAcc=0; save(); }
+  requestAnimationFrame(loop);
+}
+
+/* =======================================================================
+   INIT
+   ======================================================================= */
+function init(){
+  buildSprites();
+  resize();
+  const loaded=load();
+  setLang(LANG);
+  if(S.sound===false){ document.getElementById("bSound").textContent="🔇"; document.getElementById("bSound").classList.remove("on"); }
+  buildTabs(); switchTab("extract"); refreshHUD();
+  if(!loaded){ S.waveTimer=20; }
+  // first wave primer
+  if(S.wave===0 && S.waveTimer>25) S.waveTimer=25;
+  if(pendingOffline) setTimeout(showOffline,400);
+  if(!storageOK){ setTimeout(()=>toast("⚠ "+(LANG==="es"?"Guardado no disponible aquí — descarga el .html":"Save unavailable here — download the .html")),800); }
+  requestAnimationFrame(loop);
+}
+window.addEventListener("load",()=>{ setTimeout(resize,50); });
+init();
+</script>
+</body>
+</html>
