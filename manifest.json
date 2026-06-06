@@ -22,5 +22,6 @@
       "purpose": "any"
     }
   ],
-  "categories": ["games"]
+  "categories": ["games"],
+  "permissions": ["AD_ID"]
 }
